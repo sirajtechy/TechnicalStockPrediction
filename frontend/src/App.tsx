@@ -32,6 +32,7 @@ function App() {
   const [halalCount, setHalalCount] = useState<number | null>(null);
   const [loadingHalal, setLoadingHalal] = useState(false);
   const [minScore, setMinScore] = useState(0);
+  const [hideOverbought, setHideOverbought] = useState(false);
   const [scanStartTime, setScanStartTime] = useState<number>(0);
   const [scanTickerCount, setScanTickerCount] = useState<number>(0);
 
@@ -153,8 +154,13 @@ function App() {
 
                     {results && (() => {
                       const shown = results.ranked_tickers.filter(
-                        (t) => t.bullish_score >= minScore
+                        (t) =>
+                          t.bullish_score >= minScore &&
+                          !(hideOverbought && t.entry_timing?.zone === "overbought")
                       );
+                      const overboughtCount = results.ranked_tickers.filter(
+                        (t) => t.entry_timing?.zone === "overbought"
+                      ).length;
                       const avg =
                         shown.length > 0
                           ? Math.round(
@@ -190,6 +196,17 @@ function App() {
                                   step={5}
                                 />
                               </FormField>
+                              <Toggle
+                                checked={hideOverbought}
+                                onChange={({ detail }) => setHideOverbought(detail.checked)}
+                                description={
+                                  overboughtCount > 0
+                                    ? `Hide ${overboughtCount} stock(s) in the overbought / profit-taking risk zone (RSI>70, stretched above average, or parabolic).`
+                                    : "No overbought stocks in these results."
+                                }
+                              >
+                                🔴 Hide overbought stocks
+                              </Toggle>
                             </SpaceBetween>
                           </Container>
                           <ResultsTable

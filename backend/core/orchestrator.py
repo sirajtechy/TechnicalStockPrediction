@@ -11,12 +11,14 @@ import uuid
 from datetime import datetime, timedelta
 
 from api.models import (
+    EntryTimingResponse,
     IndicatorSignals,
     ScanMetadata,
     ScanRequest,
     ScanResponse,
     TickerScore,
 )
+from core.entry_timing import classify_entry_timing
 from config import config
 from core.api_client import ApiError, RestApiClient
 from core.indicator_calculator import IndicatorCalculator
@@ -272,6 +274,18 @@ class ScanOrchestrator:
                         "relative_strength": indicators.relative_strength,
                     }
 
+                    # Entry timing classification (separate signal, does not affect score)
+                    et = classify_entry_timing(current_price, indicators)
+                    entry_timing = EntryTimingResponse(
+                        zone=et.zone,
+                        label=et.label,
+                        reasons=et.reasons,
+                        rsi=et.rsi,
+                        dist_above_sma50_pct=et.dist_above_sma50_pct,
+                        proximity_to_high=et.proximity_to_high,
+                        roc_10=et.roc_10,
+                    )
+
                     ticker_score = TickerScore(
                         ticker=ticker,
                         bullish_score=bullish_score,
@@ -281,6 +295,7 @@ class ScanOrchestrator:
                         passed_hard_filters=True,
                         is_candidate=bullish_score >= regime.threshold,
                         score_breakdown=score_breakdown,
+                        entry_timing=entry_timing,
                     )
 
                     scored_tickers.append(ticker_score)

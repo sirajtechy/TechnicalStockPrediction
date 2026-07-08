@@ -46,6 +46,51 @@ function statusBadge(t: TickerScore) {
   return <Badge color="grey">Failed filters</Badge>;
 }
 
+const ENTRY_ZONE_META: Record<
+  string,
+  { color: "green" | "grey" | "red"; short: string }
+> = {
+  buy_zone: { color: "green", short: "🟢 Buy Zone" },
+  extended: { color: "grey", short: "🟡 Extended" },
+  overbought: { color: "red", short: "🔴 Overbought" },
+};
+
+function entryTimingBadge(t: TickerScore) {
+  const et = t.entry_timing;
+  if (!et) return <span style={{ color: "#5f6b7a" }}>—</span>;
+  const meta = ENTRY_ZONE_META[et.zone] ?? { color: "grey" as const, short: et.zone };
+  const badge = (
+    <Badge color={meta.color} data-testid={`entry-zone-${t.ticker}`}>
+      {meta.short}
+    </Badge>
+  );
+  return (
+    <Popover
+      dismissButton={false}
+      position="top"
+      size="medium"
+      triggerType="custom"
+      header={et.label}
+      content={
+        <Box>
+          {et.reasons.map((r, i) => (
+            <div key={i} style={{ marginBottom: 4 }}>
+              • {r}
+            </div>
+          ))}
+          <div style={{ marginTop: 8, fontSize: 12, color: "#5f6b7a" }}>
+            {et.rsi != null && `RSI ${et.rsi}`}
+            {et.dist_above_sma50_pct != null && ` · ${et.dist_above_sma50_pct}% above SMA50`}
+            {et.roc_10 != null && ` · ${et.roc_10}% / 10d`}
+          </div>
+        </Box>
+      }
+    >
+      <span style={{ cursor: "pointer" }}>{badge}</span>
+    </Popover>
+  );
+}
+
 function scoreBadge(item: TickerScore) {
   const badge = <Badge color={getScoreColor(item.bullish_score)}>{item.bullish_score}</Badge>;
   if (!item.score_breakdown) return badge;
@@ -164,6 +209,12 @@ export default function ResultsTable({ tickers, regime, scoreThreshold }: Result
         cell: (item: RankedTicker) => `$${item.current_price.toFixed(2)}`,
         sortingComparator: (a: RankedTicker, b: RankedTicker) => a.current_price - b.current_price,
         width: 100,
+      },
+      {
+        id: "entry_timing",
+        header: "Entry Timing",
+        cell: (item: RankedTicker) => entryTimingBadge(item),
+        width: 150,
       },
       {
         id: "signals",

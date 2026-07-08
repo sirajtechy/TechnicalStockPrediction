@@ -36,6 +36,18 @@ export interface IndicatorSignals {
   relative_strength_positive: boolean;
 }
 
+export type EntryZone = "buy_zone" | "extended" | "overbought";
+
+export interface EntryTiming {
+  zone: EntryZone;
+  label: string;
+  reasons: string[];
+  rsi: number | null;
+  dist_above_sma50_pct: number | null;
+  proximity_to_high: number | null;
+  roc_10: number | null;
+}
+
 export interface TickerScore {
   ticker: string;
   bullish_score: number;
@@ -57,6 +69,8 @@ export interface TickerScore {
   score_breakdown?: Record<string, number> | null;
   // Trade plan for BUY candidates (null for non-candidates or plan failure)
   trade_plan?: TradePlan | null;
+  // Entry timing zone (buy_zone / extended / overbought) — profit-taking risk warning
+  entry_timing?: EntryTiming | null;
 }
 
 export interface ScanMetadata {

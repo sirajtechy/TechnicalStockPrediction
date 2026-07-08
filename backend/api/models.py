@@ -90,6 +90,22 @@ class TradePlanResponse(BaseModel):
     analyst_high: float | None = Field(default=None, description="Analyst highest price target")
 
 
+class EntryTimingResponse(BaseModel):
+    """Entry timing classification (overbought / extended / buy zone)."""
+
+    zone: str = Field(description="Entry zone: 'buy_zone', 'extended', or 'overbought'")
+    label: str = Field(description="Human-readable label for the zone")
+    reasons: list[str] = Field(default_factory=list, description="Why the stock is in this zone")
+    rsi: float | None = Field(default=None, description="RSI(14) value")
+    dist_above_sma50_pct: float | None = Field(
+        default=None, description="Percentage distance above the 50-day SMA"
+    )
+    proximity_to_high: float | None = Field(
+        default=None, description="Proximity to 20-day high (98+ = at the high)"
+    )
+    roc_10: float | None = Field(default=None, description="10-day rate of change (%)")
+
+
 class TickerScore(BaseModel):
     """Scored ticker with details."""
 
@@ -98,6 +114,11 @@ class TickerScore(BaseModel):
     signals: IndicatorSignals = Field(description="Individual indicator signals")
     current_price: float = Field(description="Current stock price")
     indicators: dict[str, float | None] = Field(description="Raw indicator values")
+    entry_timing: EntryTimingResponse | None = Field(
+        default=None,
+        description="Entry timing zone (buy_zone / extended / overbought) — a separate "
+        "signal warning of profit-taking risk, does not affect the bullish score",
+    )
     # V3 diagnostic fields (populated when include_all is requested)
     passed_hard_filters: bool | None = Field(
         default=None, description="Whether the ticker passed the Minervini hard filters"
