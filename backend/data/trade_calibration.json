@@ -1,0 +1,71 @@
+{
+  "version": "1.1",
+  "generated_at": "2026-07-01T06:15:00Z",
+  "sample_period": {
+    "start": "2023-03-01",
+    "end": "2025-01-02"
+  },
+  "total_trades": 219,
+  "operating_point": {
+    "atr_mult": 2.0,
+    "target1_mult": 1.5,
+    "target2_mult": 2.5,
+    "is_expectancy_r": 0.3824,
+    "oos_expectancy_r": 0.303,
+    "overall_hit_rate": 0.575,
+    "breakeven_rate": 0.40
+  },
+  "validation": {
+    "overall_expectancy_r": 0.361,
+    "is_hit_rate": 0.575,
+    "is_expectancy_r": 0.3824,
+    "oos_hit_rate": 0.525,
+    "oos_expectancy_r": 0.303,
+    "breakeven_rate_for_1_5R": 0.40,
+    "passes_breakeven": true,
+    "passes_positive_expectancy": true,
+    "passes_oos_positive": true
+  },
+  "buckets": {
+    "high_tight": {
+      "score_band": "high",
+      "atr_band": "tight",
+      "sample_size": 155,
+      "realized_hit_rate": 0.58,
+      "mean_expectancy_r": 0.38,
+      "prob_hit_target1": 0.58
+    },
+    "high_normal": {
+      "score_band": "high",
+      "atr_band": "normal",
+      "sample_size": 24,
+      "realized_hit_rate": 0.53,
+      "mean_expectancy_r": 0.29,
+      "prob_hit_target1": 0.53
+    },
+    "high_wide": {
+      "score_band": "high",
+      "atr_band": "wide",
+      "sample_size": 12,
+      "realized_hit_rate": 0.45,
+      "mean_expectancy_r": 0.17,
+      "prob_hit_target1": 0.45
+    },
+    "mid_tight": {
+      "score_band": "mid",
+      "atr_band": "tight",
+      "sample_size": 32,
+      "realized_hit_rate": 0.54,
+      "mean_expectancy_r": 0.31,
+      "prob_hit_target1": 0.54
+    },
+    "mid_normal": {
+      "score_band": "mid",
+      "atr_band": "normal",
+      "sample_size": 8,
+      "realized_hit_rate": 0.50,
+      "mean_expectancy_r": 0.25,
+      "prob_hit_target1": 0.50
+    }
+  }
+}

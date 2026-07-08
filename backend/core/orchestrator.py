@@ -8,15 +8,17 @@ indicator calculation, scoring, and ranking.
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from api.models import (
+    EntryTimingResponse,
     IndicatorSignals,
     ScanMetadata,
     ScanRequest,
     ScanResponse,
     TickerScore,
 )
+from core.entry_timing import classify_entry_timing
 from config import config
 from core.api_client import ApiError, RestApiClient
 from core.indicator_calculator import IndicatorCalculator
@@ -272,6 +274,18 @@ class ScanOrchestrator:
                         "relative_strength": indicators.relative_strength,
                     }
 
+                    # Entry timing classification (separate signal, does not affect score)
+                    et = classify_entry_timing(current_price, indicators)
+                    entry_timing = EntryTimingResponse(
+                        zone=et.zone,
+                        label=et.label,
+                        reasons=et.reasons,
+                        rsi=et.rsi,
+                        dist_above_sma50_pct=et.dist_above_sma50_pct,
+                        proximity_to_high=et.proximity_to_high,
+                        roc_10=et.roc_10,
+                    )
+
                     ticker_score = TickerScore(
                         ticker=ticker,
                         bullish_score=bullish_score,
@@ -281,6 +295,7 @@ class ScanOrchestrator:
                         passed_hard_filters=True,
                         is_candidate=bullish_score >= regime.threshold,
                         score_breakdown=score_breakdown,
+                        entry_timing=entry_timing,
                     )
 
                     scored_tickers.append(ticker_score)
@@ -300,6 +315,124 @@ class ScanOrchestrator:
                 )
             if not scored_tickers:
                 logger.info("No tickers qualified after filtering — returning empty candidate list")
+
+            # === PASS 3: Trade Plan generation for BUY candidates (R11) ===
+            candidate_scores = [ts for ts in scored_tickers if ts.is_candidate]
+
+            if candidate_scores:
+                from core.trade_engine import TradeEngine
+                from core.massive_client import MassiveDataClient
+                from core.trade_calibration import CalibrationTable
+                from pathlib import Path
+                from api.models import TradePlanResponse
+
+                # Load calibration table
+                cal_path = Path(__file__).parent.parent / "data" / "trade_calibration.json"
+                calibration = None
+                if cal_path.exists():
+                    try:
+                        calibration = CalibrationTable.load(cal_path)
+                    except (ValueError, FileNotFoundError):
+                        pass
+
+                trade_engine = TradeEngine(cfg=config, calibration=calibration)
+                massive = MassiveDataClient(
+                    api_key=config.POLYGON_TOKEN, base_url=config.API_BASE_URL
+                )
+
+                try:
+                    today = datetime.utcnow()
+                    horizon_end = today + timedelta(days=45)
+                    today_str = today.strftime("%Y-%m-%d")
+                    horizon_str = horizon_end.strftime("%Y-%m-%d")
+                    expiry_from = (today + timedelta(days=14)).strftime("%Y-%m-%d")
+                    expiry_to = (today + timedelta(days=45)).strftime("%Y-%m-%d")
+
+                    for ticker_score in candidate_scores:
+                        try:
+                            # Find the stock_data from PASS 1 rows cache
+                            stock_data = None
+                            for t, sd, ind, cp, cv in rows:
+                                if t == ticker_score.ticker:
+                                    stock_data = sd
+                                    break
+
+                            if stock_data is None or len(stock_data.highs) < 15:
+                                ticker_score.trade_plan = None
+                                continue
+
+                            # Fetch enhancement data (each returns None on failure)
+                            earnings_list = await massive.get_earnings(
+                                ticker_score.ticker, today_str, horizon_str
+                            )
+                            options_iv = await massive.get_options_iv(
+                                ticker_score.ticker,
+                                ticker_score.current_price,
+                                expiry_from,
+                                expiry_to,
+                            )
+                            analyst = await massive.get_analyst_consensus(ticker_score.ticker)
+
+                            # Determine earliest earnings date
+                            earnings_date = None
+                            if earnings_list:
+                                dates = [
+                                    e.get("date") for e in earnings_list if e.get("date")
+                                ]
+                                if dates:
+                                    earnings_date = min(dates)
+
+                            # Build trade plan
+                            plan = trade_engine.build_plan(
+                                entry=ticker_score.current_price,
+                                highs=stock_data.highs,
+                                lows=stock_data.lows,
+                                closes=stock_data.prices,
+                                score=ticker_score.bullish_score,
+                                earnings_date=earnings_date,
+                                options_iv=options_iv,
+                                analyst=analyst,
+                            )
+
+                            # Convert TradePlan dataclass to TradePlanResponse Pydantic model
+                            ticker_score.trade_plan = TradePlanResponse(
+                                entry=plan.entry,
+                                stop=plan.stop,
+                                stop_pct=plan.stop_pct,
+                                target1=plan.target1,
+                                target1_pct=plan.target1_pct,
+                                target2=plan.target2,
+                                target2_pct=plan.target2_pct,
+                                risk_per_share=plan.risk_per_share,
+                                reward_risk=plan.reward_risk,
+                                low_rr=plan.low_rr,
+                                data_unavailable=plan.data_unavailable,
+                                expected_move_pct=plan.expected_move_pct,
+                                vol_source=plan.vol_source,
+                                resistance=plan.resistance,
+                                target_above_resistance=plan.target_above_resistance,
+                                resistance_data_limited=plan.resistance_data_limited,
+                                earnings_in_window=plan.earnings_in_window,
+                                prob_hit_target1=plan.prob_hit_target1,
+                                calibration_available=plan.calibration_available,
+                                analyst_target=plan.analyst_target,
+                                analyst_low=plan.analyst_low,
+                                analyst_high=plan.analyst_high,
+                            )
+
+                        except ValueError as e:
+                            logger.warning(
+                                f"Trade plan failed for {ticker_score.ticker}: {e}"
+                            )
+                            ticker_score.trade_plan = None
+                        except Exception as e:
+                            logger.error(
+                                f"Unexpected error building trade plan for "
+                                f"{ticker_score.ticker}: {e}"
+                            )
+                            ticker_score.trade_plan = None
+                finally:
+                    await massive.close()
 
             # Step 6: Rank tickers
             ranked_tickers = self.ranking_service.rank_tickers(scored_tickers)

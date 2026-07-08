@@ -17,6 +17,15 @@ class StockData:
     prices: np.ndarray  # Close prices
     volumes: np.ndarray
     timestamps: np.ndarray
+    highs: np.ndarray = None  # High prices (float64)
+    lows: np.ndarray = None  # Low prices (float64)
+
+    def __post_init__(self):
+        """Default highs/lows to empty arrays if not provided (backward compat)."""
+        if self.highs is None:
+            self.highs = np.empty(0, dtype=np.float64)
+        if self.lows is None:
+            self.lows = np.empty(0, dtype=np.float64)
 
 
 @dataclass

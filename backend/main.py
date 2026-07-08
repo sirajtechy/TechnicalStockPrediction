@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.backtest_endpoints import backtest_router
 from api.endpoints import router
+from api.intel_endpoints import intel_router
 from config import config
 from core.scan_store import ScanStore
 from utils.logging import get_logger, setup_logging
@@ -39,6 +40,7 @@ app.add_middleware(
 # Include API routes
 app.include_router(router, prefix="/api/v1")
 app.include_router(backtest_router, prefix="/api/v1")
+app.include_router(intel_router, prefix="/api/v1")
 
 
 @app.on_event("startup")

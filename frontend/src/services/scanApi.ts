@@ -1,6 +1,7 @@
 // API client for the Bullish Stock Scanner backend
 
 import type { ScanRequest, ScanResponse } from '../types/scan';
+import type { StockIntelligence } from '../types/intelligence';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -48,6 +49,18 @@ export async function getHalalUniverse(): Promise<{ tickers: string[]; count: nu
     throw new Error('Failed to load the halal universe');
   }
 
+  return response.json();
+}
+
+/**
+ * Fetch the full "intelligence" bundle for one ticker (news+sentiment, insider trades,
+ * short interest, dividends, macro, and — when entitled — analyst/earnings/fundamentals).
+ */
+export async function getStockIntelligence(ticker: string): Promise<StockIntelligence> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/intelligence/${encodeURIComponent(ticker)}`);
+  if (!response.ok) {
+    throw new Error('Failed to load stock intelligence');
+  }
   return response.json();
 }
 

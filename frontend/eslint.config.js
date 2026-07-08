@@ -20,8 +20,11 @@ export default defineConfig([
     },
     rules: {
       // The React Compiler is not enabled in this project; eslint-plugin-react-hooks v7's
-      // experimental compiler rule flags valid useMemo usage as un-preservable. Disable it.
+      // experimental compiler rules flag valid patterns. Disable the two that misfire here:
+      // - preserve-manual-memoization: flags valid useMemo usage as un-preservable.
+      // - set-state-in-effect: flags the standard "reset + fetch on prop change" effect.
       'react-hooks/preserve-manual-memoization': 'off',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ])

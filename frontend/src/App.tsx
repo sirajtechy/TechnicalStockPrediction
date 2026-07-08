@@ -14,7 +14,7 @@ import FormField from "@cloudscape-design/components/form-field";
 import "@cloudscape-design/global-styles/index.css";
 
 import ScanButton from "./components/ScanButton";
-import LoadingIndicator from "./components/LoadingIndicator";
+import ScanProgress from "./components/ScanProgress";
 import MarketRegimeBadge from "./components/MarketRegimeBadge";
 import ResultsTable from "./components/ResultsTable";
 import ErrorMessage from "./components/ErrorMessage";
@@ -32,6 +32,9 @@ function App() {
   const [halalCount, setHalalCount] = useState<number | null>(null);
   const [loadingHalal, setLoadingHalal] = useState(false);
   const [minScore, setMinScore] = useState(0);
+  const [hideOverbought, setHideOverbought] = useState(false);
+  const [scanStartTime, setScanStartTime] = useState<number>(0);
+  const [scanTickerCount, setScanTickerCount] = useState<number>(0);
 
   const loadAllHalal = async () => {
     setLoadingHalal(true);
@@ -66,9 +69,13 @@ function App() {
         .filter((t) => t.length > 0);
 
       if (tickerList.length === 0) {
+        setLoading(false);
         setError("Please enter at least one valid ticker symbol");
         return;
       }
+
+      setScanTickerCount(tickerList.length);
+      setScanStartTime(Date.now());
 
       // Execute scan
       const data = await executeScan(tickerList, showAll);
@@ -143,12 +150,17 @@ function App() {
 
                     {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
 
-                    {loading && <LoadingIndicator message="Analyzing stocks..." />}
+                    {loading && <ScanProgress tickerCount={scanTickerCount} startTime={scanStartTime} />}
 
                     {results && (() => {
                       const shown = results.ranked_tickers.filter(
-                        (t) => t.bullish_score >= minScore
+                        (t) =>
+                          t.bullish_score >= minScore &&
+                          !(hideOverbought && t.entry_timing?.zone === "overbought")
                       );
+                      const overboughtCount = results.ranked_tickers.filter(
+                        (t) => t.entry_timing?.zone === "overbought"
+                      ).length;
                       const avg =
                         shown.length > 0
                           ? Math.round(
@@ -184,6 +196,17 @@ function App() {
                                   step={5}
                                 />
                               </FormField>
+                              <Toggle
+                                checked={hideOverbought}
+                                onChange={({ detail }) => setHideOverbought(detail.checked)}
+                                description={
+                                  overboughtCount > 0
+                                    ? `Hide ${overboughtCount} stock(s) in the overbought / profit-taking risk zone (RSI>70, stretched above average, or parabolic).`
+                                    : "No overbought stocks in these results."
+                                }
+                              >
+                                🔴 Hide overbought stocks
+                              </Toggle>
                             </SpaceBetween>
                           </Container>
                           <ResultsTable

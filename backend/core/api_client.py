@@ -129,13 +129,20 @@ class RestApiClient:
 
                 results = data["results"]
 
-                # Extract prices, volumes, timestamps
+                # Extract prices, volumes, timestamps, highs, lows
                 prices = np.array([bar["c"] for bar in results], dtype=np.float64)
                 volumes = np.array([bar["v"] for bar in results], dtype=np.float64)
                 timestamps = np.array([bar["t"] for bar in results], dtype=np.int64)
+                highs = np.array([bar["h"] for bar in results], dtype=np.float64)
+                lows = np.array([bar["l"] for bar in results], dtype=np.float64)
 
                 stock_data = StockData(
-                    ticker=ticker, prices=prices, volumes=volumes, timestamps=timestamps
+                    ticker=ticker,
+                    prices=prices,
+                    volumes=volumes,
+                    timestamps=timestamps,
+                    highs=highs,
+                    lows=lows,
                 )
 
                 # Cache the result

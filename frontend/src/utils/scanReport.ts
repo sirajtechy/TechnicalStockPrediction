@@ -1,6 +1,6 @@
 // Builds a self-contained, downloadable HTML report of a Live Scanner result.
 
-import type { ScanResponse, TickerScore } from "../types/scan";
+import type { ScanResponse, TickerScore, TradePlan } from "../types/scan";
 
 const BREAKDOWN_KEYS: [string, string][] = [
   ["trend", "Trend"],
@@ -30,6 +30,111 @@ function statusLabel(t: TickerScore): string {
   if (t.passed_hard_filters) return "Below threshold";
   if (t.passed_hard_filters === false) return "Failed filters";
   return "—";
+}
+
+/** Build the Trade Plan HTML section for candidates with non-null trade_plan. */
+function buildTradePlanSection(tickers: TickerScore[]): string {
+  const candidates = tickers.filter(
+    (t): t is TickerScore & { trade_plan: TradePlan } => t.trade_plan != null
+  );
+  if (candidates.length === 0) return "";
+
+  const tradePlanCss = `
+    .tp-section{margin-top:32px}
+    .tp-section h2{color:#0b3d66;margin-bottom:8px}
+    .tp-table{border-collapse:collapse;width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:12px}
+    .tp-table th,.tp-table td{padding:6px 8px;border:1px solid #e6ebf1;text-align:center}
+    .tp-table th{background:#0b5394;color:#fff;white-space:nowrap}
+    .tp-table td.l{text-align:left}
+    .tp-row-earnings{background:#fff8e1}
+    .tp-row-low-rr{background:#fff3e0}
+    .tp-warn{color:#e65100;font-weight:600}`;
+
+  const headerRow = `<tr>
+    <th>Ticker</th>
+    <th>Entry ($)</th>
+    <th>Stop ($)</th>
+    <th>Stop (%)</th>
+    <th>Target1 ($)</th>
+    <th>Target1 (%)</th>
+    <th>Target2 ($)</th>
+    <th>Target2 (%)</th>
+    <th>R:R</th>
+    <th>Exp. Move (%)</th>
+    <th>Vol Source</th>
+    <th>Probability (%)</th>
+    <th>Earnings</th>
+    <th>Resistance ($)</th>
+    <th>Analyst</th>
+  </tr>`;
+
+  const rows = candidates
+    .map((t) => {
+      const p = t.trade_plan;
+      const rowClasses: string[] = [];
+      if (p.earnings_in_window) rowClasses.push("tp-row-earnings");
+      else if (p.low_rr) rowClasses.push("tp-row-low-rr");
+
+      const resistanceCell = p.target_above_resistance
+        ? `<td class="tp-warn">${p.resistance.toFixed(2)} ⚠</td>`
+        : `<td>${p.resistance.toFixed(2)}</td>`;
+
+      const earningsCell = p.earnings_in_window
+        ? `<td class="tp-warn">⚠ ${p.earnings_in_window}</td>`
+        : `<td>—</td>`;
+
+      const rrCell =
+        p.reward_risk != null
+          ? p.low_rr
+            ? `<td class="tp-warn">${p.reward_risk.toFixed(2)}</td>`
+            : `<td>${p.reward_risk.toFixed(2)}</td>`
+          : `<td>—</td>`;
+
+      const expMoveCell =
+        p.expected_move_pct != null
+          ? `<td>${p.expected_move_pct.toFixed(2)}</td>`
+          : `<td>—</td>`;
+
+      const volSourceLabel = p.vol_source === "options_iv" ? "IV" : "Hist";
+
+      const probCell =
+        p.prob_hit_target1 != null
+          ? `<td>${(p.prob_hit_target1 * 100).toFixed(2)}</td>`
+          : `<td>—</td>`;
+
+      const analystCell =
+        p.analyst_target != null
+          ? `<td>${p.analyst_low?.toFixed(2) ?? "—"} / ${p.analyst_target.toFixed(2)} / ${p.analyst_high?.toFixed(2) ?? "—"}</td>`
+          : `<td>—</td>`;
+
+      return `<tr class="${rowClasses.join(" ")}">
+        <td class="l"><b>${t.ticker}</b></td>
+        <td>${p.entry.toFixed(2)}</td>
+        <td>${p.stop.toFixed(2)}</td>
+        <td>${p.stop_pct.toFixed(2)}</td>
+        <td>${p.target1.toFixed(2)}</td>
+        <td>${p.target1_pct.toFixed(2)}</td>
+        <td>${p.target2.toFixed(2)}</td>
+        <td>${p.target2_pct.toFixed(2)}</td>
+        ${rrCell}
+        ${expMoveCell}
+        <td>${volSourceLabel}</td>
+        ${probCell}
+        ${earningsCell}
+        ${resistanceCell}
+        ${analystCell}
+      </tr>`;
+    })
+    .join("");
+
+  return `<style>${tradePlanCss}</style>
+  <div class="tp-section">
+    <h2>Trade Plan</h2>
+    <table class="tp-table">
+      ${headerRow}
+      ${rows}
+    </table>
+  </div>`;
 }
 
 /** Generate the full HTML report string for a scan result. */
@@ -75,6 +180,8 @@ export function buildScanReportHtml(results: ScanResponse): string {
     })
     .join("");
 
+  const tradePlanHtml = buildTradePlanSection(rows);
+
   return `<!doctype html><html><head><meta charset="utf-8"><title>Scan Report</title><style>${css}</style></head>
 <body><div class="wrap">
   <h1>Bullish Stock Scan Report</h1>
@@ -89,6 +196,7 @@ export function buildScanReportHtml(results: ScanResponse): string {
     <tr><th>Rank</th><th>Ticker</th><th>Score</th>${hasStatus ? "<th>Status</th>" : ""}<th>Price</th>${bdHeaders}<th>Active signals</th></tr>
     ${body || `<tr><td colspan="20">No results.</td></tr>`}
   </table>
+  ${tradePlanHtml}
 </div></body></html>`;
 }
 

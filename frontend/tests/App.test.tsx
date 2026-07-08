@@ -204,9 +204,9 @@ describe('App Component', () => {
       const scanButton = screen.getByRole('button', { name: /run scan/i });
       fireEvent.click(scanButton);
 
-      // Loading indicator should appear
+      // Loading indicator (ScanProgress) should appear
       await waitFor(() => {
-        expect(screen.getByText(/analyzing stocks/i)).toBeInTheDocument();
+        expect(screen.getByText(/analyzing/i)).toBeInTheDocument();
       });
     });
 

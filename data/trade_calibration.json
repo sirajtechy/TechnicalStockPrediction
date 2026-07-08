@@ -1,0 +1,82 @@
+{
+  "version": "2.0",
+  "generated_at": "2026-07-01T08:20:42.356565Z",
+  "method": "comprehensive_backtest",
+  "sample_period": {
+    "start": "2023-01-03",
+    "end": "2024-12-02"
+  },
+  "universe_size": 212,
+  "scan_dates": 24,
+  "total_trades": 2400,
+  "operating_point": {
+    "atr_mult": 3.0,
+    "target1_mult": 1.0,
+    "target2_mult": 2.0,
+    "is_expectancy_r": 0.0071,
+    "oos_expectancy_r": 0.1583,
+    "overall_hit_rate": 0.5308,
+    "breakeven_rate": 0.5
+  },
+  "validation": {
+    "overall_expectancy_r": 0.0525,
+    "is_hit_rate": 0.5042,
+    "is_expectancy_r": 0.0071,
+    "oos_hit_rate": 0.5919,
+    "oos_expectancy_r": 0.1583,
+    "breakeven_rate": 0.5,
+    "passes_breakeven": true,
+    "passes_positive_expectancy": true,
+    "passes_oos_positive": true
+  },
+  "buckets": {
+    "high_normal": {
+      "score_band": "high",
+      "atr_band": "normal",
+      "sample_size": 291,
+      "realized_hit_rate": 0.5319,
+      "mean_expectancy_r": 0.0515,
+      "prob_hit_target1": 0.5319
+    },
+    "high_tight": {
+      "score_band": "high",
+      "atr_band": "tight",
+      "sample_size": 1023,
+      "realized_hit_rate": 0.5398,
+      "mean_expectancy_r": 0.0684,
+      "prob_hit_target1": 0.5398
+    },
+    "high_wide": {
+      "score_band": "high",
+      "atr_band": "wide",
+      "sample_size": 17,
+      "realized_hit_rate": 0.2941,
+      "mean_expectancy_r": -0.4118,
+      "prob_hit_target1": 0.2941
+    },
+    "mid_normal": {
+      "score_band": "mid",
+      "atr_band": "normal",
+      "sample_size": 156,
+      "realized_hit_rate": 0.5461,
+      "mean_expectancy_r": 0.0833,
+      "prob_hit_target1": 0.5461
+    },
+    "mid_tight": {
+      "score_band": "mid",
+      "atr_band": "tight",
+      "sample_size": 897,
+      "realized_hit_rate": 0.5244,
+      "mean_expectancy_r": 0.0412,
+      "prob_hit_target1": 0.5244
+    },
+    "mid_wide": {
+      "score_band": "mid",
+      "atr_band": "wide",
+      "sample_size": 16,
+      "realized_hit_rate": 0.4375,
+      "mean_expectancy_r": -0.125,
+      "prob_hit_target1": 0.4375
+    }
+  }
+}

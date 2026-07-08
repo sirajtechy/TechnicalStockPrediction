@@ -82,9 +82,9 @@ class TestFetchStockData:
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "results": [
-                    {"c": 150.0, "v": 1000000, "t": 1609459200000},
-                    {"c": 151.0, "v": 1100000, "t": 1609545600000},
-                    {"c": 152.0, "v": 1200000, "t": 1609632000000},
+                    {"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000},
+                    {"c": 151.0, "h": 153.0, "l": 150.0, "v": 1100000, "t": 1609545600000},
+                    {"c": 152.0, "h": 154.0, "l": 151.0, "v": 1200000, "t": 1609632000000},
                 ]
             }
 
@@ -98,6 +98,11 @@ class TestFetchStockData:
             assert np.array_equal(result.prices, np.array([150.0, 151.0, 152.0]))
             assert np.array_equal(result.volumes, np.array([1000000, 1100000, 1200000]))
             assert len(result.timestamps) == 3
+            # Verify highs and lows are populated
+            assert np.array_equal(result.highs, np.array([152.0, 153.0, 154.0]))
+            assert np.array_equal(result.lows, np.array([149.0, 150.0, 151.0]))
+            # Verify highs[i] >= lows[i] invariant
+            assert all(result.highs[i] >= result.lows[i] for i in range(len(result.highs)))
 
     @pytest.mark.asyncio
     async def test_cache_hit(self):
@@ -113,7 +118,7 @@ class TestFetchStockData:
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "results": [
-                    {"c": 150.0, "v": 1000000, "t": 1609459200000},
+                    {"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000},
                 ]
             }
 
@@ -146,11 +151,11 @@ class TestFetchStockData:
                 response.status_code = 200
                 if "AAPL" in url:
                     response.json.return_value = {
-                        "results": [{"c": 150.0, "v": 1000000, "t": 1609459200000}]
+                        "results": [{"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000}]
                     }
                 else:
                     response.json.return_value = {
-                        "results": [{"c": 300.0, "v": 2000000, "t": 1609459200000}]
+                        "results": [{"c": 300.0, "h": 302.0, "l": 299.0, "v": 2000000, "t": 1609459200000}]
                     }
                 return response
 
@@ -193,7 +198,7 @@ class TestFetchStockData:
                     response = Mock()
                     response.status_code = 200
                     response.json.return_value = {
-                        "results": [{"c": 150.0, "v": 1000000, "t": 1609459200000}]
+                        "results": [{"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000}]
                     }
                     return response
 
@@ -278,7 +283,7 @@ class TestFetchStockData:
                     response = Mock()
                     response.status_code = 200
                     response.json.return_value = {
-                        "results": [{"c": 150.0, "v": 1000000, "t": 1609459200000}]
+                        "results": [{"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000}]
                     }
                     return response
 
@@ -302,7 +307,7 @@ class TestFetchStockData:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
-                "results": [{"c": 150.0, "v": 1000000, "t": 1609459200000}]
+                "results": [{"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000}]
             }
 
             client.client.get = AsyncMock(return_value=mock_response)
@@ -339,7 +344,7 @@ class TestCacheManagement:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
-                "results": [{"c": 150.0, "v": 1000000, "t": 1609459200000}]
+                "results": [{"c": 150.0, "h": 152.0, "l": 149.0, "v": 1000000, "t": 1609459200000}]
             }
 
             client.client.get = AsyncMock(return_value=mock_response)
